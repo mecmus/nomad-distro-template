@@ -1,0 +1,264 @@
+{{- if .Values.networkPolicy.enabled }}
+{{- if eq .Values.networkPolicy.type "kubernetes" }}
+---
+# Network Policy for App
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "nomad-oasis.fullname" . }}-app
+  labels:
+    {{- include "nomad-oasis.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "nomad-oasis.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: app
+  policyTypes:
+    {{- if .Values.networkPolicy.ingress.enabled }}
+    - Ingress
+    {{- end }}
+    {{- if .Values.networkPolicy.egress.enabled }}
+    - Egress
+    {{- end }}
+  {{- if .Values.networkPolicy.ingress.enabled }}
+  ingress:
+    # Allow from ingress controller
+    {{- if .Values.networkPolicy.ingress.fromIngress }}
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8000
+    {{- end }}
+    # Allow from same namespace
+    - from:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 8000
+    {{- with .Values.networkPolicy.ingress.rules }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- end }}
+  {{- if .Values.networkPolicy.egress.enabled }}
+  egress:
+    # Allow DNS
+    {{- if .Values.networkPolicy.egress.allowDNS }}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+        - podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+    {{- end }}
+    # Allow to same namespace (MongoDB, Elasticsearch, RabbitMQ, Temporal)
+    - to:
+        - podSelector: {}
+    # Allow to Kubernetes API
+    {{- if .Values.networkPolicy.egress.allowKubeAPI }}
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 6443
+    {{- end }}
+    # Allow internet access (e.g., providers.optimade.org)
+    {{- if .Values.networkPolicy.egress.allowInternet }}
+    - to:
+        - namespaceSelector: {}
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80
+    {{- end }}
+    {{- with .Values.networkPolicy.egress.rules }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- end }}
+---
+# Network Policy for Worker
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "nomad-oasis.fullname" . }}-worker
+  labels:
+    {{- include "nomad-oasis.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "nomad-oasis.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: worker
+  policyTypes:
+    {{- if .Values.networkPolicy.ingress.enabled }}
+    - Ingress
+    {{- end }}
+    {{- if .Values.networkPolicy.egress.enabled }}
+    - Egress
+    {{- end }}
+  {{- if .Values.networkPolicy.ingress.enabled }}
+  ingress:
+    # Allow from same namespace
+    - from:
+        - podSelector: {}
+  {{- end }}
+  {{- if .Values.networkPolicy.egress.enabled }}
+  egress:
+    # Allow DNS
+    {{- if .Values.networkPolicy.egress.allowDNS }}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+        - podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+    {{- end }}
+    # Allow to same namespace (MongoDB, Elasticsearch, RabbitMQ, Temporal)
+    - to:
+        - podSelector: {}
+    # Allow to Kubernetes API
+    {{- if .Values.networkPolicy.egress.allowKubeAPI }}
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 6443
+    {{- end }}
+    # Allow internet access (e.g., providers.optimade.org)
+    {{- if .Values.networkPolicy.egress.allowInternet }}
+    - to:
+        - namespaceSelector: {}
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80
+    {{- end }}
+    {{- with .Values.networkPolicy.egress.rules }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- end }}
+{{- else if eq .Values.networkPolicy.type "cilium" }}
+---
+# Cilium Network Policy for App
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: {{ include "nomad-oasis.fullname" . }}-app
+  labels:
+    {{- include "nomad-oasis.labels" . | nindent 4 }}
+spec:
+  endpointSelector:
+    matchLabels:
+      {{- include "nomad-oasis.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: app
+  {{- if .Values.networkPolicy.ingress.enabled }}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: ingress-nginx
+      toPorts:
+        - ports:
+            - port: "8000"
+              protocol: TCP
+    - fromEndpoints:
+        - {}
+      toPorts:
+        - ports:
+            - port: "8000"
+              protocol: TCP
+  {{- end }}
+  {{- if .Values.networkPolicy.egress.enabled }}
+  egress:
+    {{- if .Values.networkPolicy.egress.allowDNS }}
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+    {{- end }}
+    - toEndpoints:
+        - {}
+    {{- if .Values.networkPolicy.egress.allowInternet }}
+    - toFQDNs:
+        - matchName: "providers.optimade.org"
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+    {{- end }}
+  {{- end }}
+{{- else if eq .Values.networkPolicy.type "calico" }}
+---
+# Calico Network Policy for App
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: {{ include "nomad-oasis.fullname" . }}-app
+  labels:
+    {{- include "nomad-oasis.labels" . | nindent 4 }}
+spec:
+  selector: >
+    app.kubernetes.io/name == "{{ include "nomad-oasis.name" . }}" &&
+    app.kubernetes.io/instance == "{{ .Release.Name }}" &&
+    app.kubernetes.io/component == "app"
+  types:
+    {{- if .Values.networkPolicy.ingress.enabled }}
+    - Ingress
+    {{- end }}
+    {{- if .Values.networkPolicy.egress.enabled }}
+    - Egress
+    {{- end }}
+  {{- if .Values.networkPolicy.ingress.enabled }}
+  ingress:
+    - action: Allow
+      protocol: TCP
+      destination:
+        ports:
+          - 8000
+  {{- end }}
+  {{- if .Values.networkPolicy.egress.enabled }}
+  egress:
+    {{- if .Values.networkPolicy.egress.allowDNS }}
+    - action: Allow
+      protocol: UDP
+      destination:
+        ports:
+          - 53
+    {{- end }}
+    - action: Allow
+      destination:
+        selector: app.kubernetes.io/instance == "{{ .Release.Name }}"
+    {{- if .Values.networkPolicy.egress.allowInternet }}
+    - action: Allow
+      protocol: TCP
+      destination:
+        ports:
+          - 443
+          - 80
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- end }}

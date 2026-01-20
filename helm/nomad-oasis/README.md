@@ -172,6 +172,30 @@ The following table lists the main configurable parameters of the NOMAD Oasis ch
 | `serviceAccount.name` | Service account name | `""` |
 | `serviceAccount.annotations` | Service account annotations | `{}` |
 
+### Proxy Parameters
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `proxy.enabled` | Enable proxy configuration for external connections | `false` |
+| `proxy.http` | HTTP proxy URL (e.g., http://proxy.example.com:8080) | `""` |
+| `proxy.https` | HTTPS proxy URL (e.g., http://proxy.example.com:8080) | `""` |
+| `proxy.noProxy` | No proxy list | `localhost,127.0.0.1,.svc,.cluster.local` |
+
+### Network Policy Parameters
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `networkPolicy.enabled` | Enable network policies | `false` |
+| `networkPolicy.type` | Network policy type: kubernetes, cilium, or calico | `kubernetes` |
+| `networkPolicy.ingress.enabled` | Enable ingress rules | `true` |
+| `networkPolicy.ingress.fromIngress` | Allow ingress from ingress controller | `true` |
+| `networkPolicy.ingress.rules` | Additional ingress rules | `[]` |
+| `networkPolicy.egress.enabled` | Enable egress rules | `true` |
+| `networkPolicy.egress.allowDNS` | Allow DNS lookups | `true` |
+| `networkPolicy.egress.allowKubeAPI` | Allow access to Kubernetes API | `true` |
+| `networkPolicy.egress.allowInternet` | Allow egress to internet | `true` |
+| `networkPolicy.egress.rules` | Additional egress rules | `[]` |
+
 ## Examples
 
 ### Basic Installation with Custom Domain
@@ -270,6 +294,41 @@ ingress:
 Install:
 ```bash
 helm install nomad ./helm/nomad-oasis -f dev-values.yaml
+```
+
+### With Proxy Configuration
+
+If your cluster requires a proxy for external connections (e.g., to providers.optimade.org):
+
+```yaml
+# proxy-values.yaml
+proxy:
+  enabled: true
+  https: "http://proxy.example.com:8080"
+  noProxy: "localhost,127.0.0.1,.svc,.cluster.local,nomad-oasis-mongo,nomad-oasis-elastic"
+```
+
+Install:
+```bash
+helm install nomad ./helm/nomad-oasis -f proxy-values.yaml
+```
+
+### With Network Policies
+
+To restrict network traffic (supports Kubernetes, Cilium, and Calico):
+
+```yaml
+# network-policy-values.yaml
+networkPolicy:
+  enabled: true
+  type: kubernetes  # or "cilium" or "calico"
+  egress:
+    allowInternet: true  # Allow access to providers.optimade.org
+```
+
+Install:
+```bash
+helm install nomad ./helm/nomad-oasis -f network-policy-values.yaml
 ```
 
 ## Upgrading

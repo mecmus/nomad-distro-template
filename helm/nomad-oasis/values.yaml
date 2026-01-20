@@ -116,3 +116,34 @@ serviceAccount:
   create: true
   name: ""
   annotations: {}
+
+# Proxy configuration for external connections (e.g., providers.optimade.org)
+proxy:
+  enabled: false
+  http: ""    # e.g., "http://proxy.example.com:8080"
+  https: ""   # e.g., "http://proxy.example.com:8080"
+  noProxy: "localhost,127.0.0.1,.svc,.cluster.local"
+
+# Network policies to control ingress/egress traffic
+networkPolicy:
+  enabled: false
+  # Type of network policy: kubernetes, cilium, or calico
+  type: kubernetes
+  # Ingress rules
+  ingress:
+    enabled: true
+    # Allow ingress from ingress controller
+    fromIngress: true
+    # Additional ingress rules
+    rules: []
+  # Egress rules
+  egress:
+    enabled: true
+    # Allow DNS lookups
+    allowDNS: true
+    # Allow access to Kubernetes API
+    allowKubeAPI: true
+    # Allow egress to internet (e.g., providers.optimade.org)
+    allowInternet: true
+    # Additional egress rules
+    rules: []
