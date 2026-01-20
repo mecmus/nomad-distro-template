@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "nomad-oasis.fullname" . }}-app
+  labels:
+    {{- include "nomad-oasis.labels" . | nindent 4 }}
+    app.kubernetes.io/component: app
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8000
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "nomad-oasis.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: app

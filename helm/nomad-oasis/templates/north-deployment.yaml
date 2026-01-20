@@ -1,0 +1,105 @@
+{{- if .Values.north.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "nomad-oasis.fullname" . }}-north
+  labels:
+    {{- include "nomad-oasis.labels" . | nindent 4 }}
+    app.kubernetes.io/component: north
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "nomad-oasis.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: north
+  template:
+    metadata:
+      labels:
+        {{- include "nomad-oasis.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: north
+    spec:
+      {{- if .Values.serviceAccount.create }}
+      serviceAccountName: {{ include "nomad-oasis.serviceAccountName" . }}
+      {{- end }}
+      containers:
+        - name: north
+          image: {{ include "nomad-oasis.imageRegistry" . }}/{{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - python
+            - -m
+            - nomad.cli
+            - admin
+            - run
+            - hub
+          ports:
+            - name: http
+              containerPort: 8081
+              protocol: TCP
+          env:
+            - name: NOMAD_SERVICE
+              value: "nomad_oasis_north"
+            - name: NOMAD_NORTH_HUB_IP
+              value: "0.0.0.0"
+            - name: NOMAD_NORTH_HUB_HOST
+              value: {{ include "nomad-oasis.fullname" . }}-north
+            - name: NOMAD_NORTH_HUB_CONNECT_IP
+              value: {{ include "nomad-oasis.fullname" . }}-north
+            - name: NOMAD_SERVICES_API_HOST
+              value: {{ include "nomad-oasis.fullname" . }}-app
+            {{- if .Values.mongodb.enabled }}
+            - name: NOMAD_MONGO_HOST
+              value: {{ include "nomad-oasis.fullname" . }}-mongo
+            {{- end }}
+            {{- if .Values.elasticsearch.enabled }}
+            - name: NOMAD_ELASTIC_HOST
+              value: {{ include "nomad-oasis.fullname" . }}-elastic
+            {{- end }}
+            - name: NOMAD_SERVICES_API_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "nomad-oasis.fullname" . }}-secret
+                  key: NOMAD_SERVICES_API_SECRET
+            - name: NOMAD_NORTH_JUPYTERHUB_CRYPT_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "nomad-oasis.fullname" . }}-secret
+                  key: NOMAD_NORTH_JUPYTERHUB_CRYPT_KEY
+          volumeMounts:
+            - name: config
+              mountPath: /app/nomad.yaml
+              subPath: nomad.yaml
+            {{- if .Values.persistence.enabled }}
+            - name: data
+              mountPath: /app/.volumes
+            {{- end }}
+          resources:
+            {{- toYaml .Values.north.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.nomad.apiBasePath }}/north/hub/health
+              port: 8081
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.nomad.apiBasePath }}/north/hub/health
+              port: 8081
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 5
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "nomad-oasis.fullname" . }}-config
+        {{- if .Values.persistence.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "nomad-oasis.fullname" . }}-data
+        {{- end }}
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

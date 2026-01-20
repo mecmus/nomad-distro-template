@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "nomad-oasis.fullname" . }}-config
+  labels:
+    {{- include "nomad-oasis.labels" . | nindent 4 }}
+data:
+  nomad.yaml: |
+    services:
+      api_host: {{ .Values.nomad.apiHost | quote }}
+      api_base_path: {{ .Values.nomad.apiBasePath | quote }}
+
+    oasis:
+      is_oasis: true
+      uses_central_user_management: true
+
+    {{- if .Values.north.enabled }}
+    north:
+      jupyterhub_crypt_key: "${NOMAD_NORTH_JUPYTERHUB_CRYPT_KEY}"
+      tools:
+        options:
+          jupyter:
+            image: {{ include "nomad-oasis.imageRegistry" . }}/{{ .Values.north.image.repository }}:{{ .Values.north.image.tag }}
+    {{- end }}
+
+    meta:
+      deployment: {{ .Values.nomad.deployment.name | quote }}
+      deployment_url: {{ .Values.nomad.deployment.url | quote }}
+      maintainer_email: {{ .Values.nomad.deployment.maintainerEmail | quote }}
+
+    logstash:
+      enabled: false
+
+    {{- if .Values.temporal.enabled }}
+    temporal:
+      enabled: true
+    {{- else }}
+    temporal:
+      enabled: false
+    {{- end }}
+
+    {{- if .Values.mongodb.enabled }}
+    mongo:
+      db_name: nomad_oasis_v1
+    {{- end }}
+
+    {{- if .Values.elasticsearch.enabled }}
+    elastic:
+      entries_index: nomad_oasis_entries_v1
+      materials_index: nomad_oasis_materials_v1
+    {{- end }}

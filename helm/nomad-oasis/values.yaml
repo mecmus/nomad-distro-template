@@ -1,0 +1,104 @@
+global:
+  imageRegistry: ghcr.io
+  imagePullSecrets: []
+
+image:
+  repository: mecmus/nomad-distro-template
+  tag: main
+  pullPolicy: IfNotPresent
+
+nomad:
+  apiBasePath: "/nomad-oasis"
+  apiHost: "localhost"
+  apiSecret: ""  # Auto-generated if empty (32+ chars)
+  deployment:
+    name: "oasis"
+    url: "https://my-oasis.org/api"
+    maintainerEmail: "admin@my-oasis.org"
+
+app:
+  replicaCount: 1
+  resources:
+    limits:
+      cpu: "2"
+      memory: 4Gi
+    requests:
+      cpu: "500m"
+      memory: 1Gi
+
+worker:
+  replicaCount: 4
+  resources:
+    limits:
+      cpu: "4"
+      memory: 8Gi
+    requests:
+      cpu: "1"
+      memory: 2Gi
+
+north:
+  enabled: true
+  jupyterhubCryptKey: ""  # Auto-generated if empty
+  image:
+    repository: mecmus/nomad-distro-template/jupyter
+    tag: main
+  resources:
+    limits:
+      cpu: "2"
+      memory: 4Gi
+    requests:
+      cpu: "500m"
+      memory: 1Gi
+
+mongodb:
+  enabled: true
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: ""
+
+elasticsearch:
+  enabled: true
+  persistence:
+    enabled: true
+    size: 30Gi
+    storageClass: ""
+  resources:
+    limits:
+      cpu: "2"
+      memory: 4Gi
+    requests:
+      cpu: "500m"
+      memory: 2Gi
+
+rabbitmq:
+  enabled: false  # Not included in initial Kubernetes deployment
+
+temporal:
+  enabled: false  # Can be enabled for workflow support
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations: {}
+  hosts:
+    - host: nomad-oasis.local
+      paths:
+        - path: /nomad-oasis
+          pathType: Prefix
+  tls: []
+  #  - secretName: nomad-oasis-tls
+  #    hosts:
+  #      - nomad-oasis.local
+
+persistence:
+  enabled: true
+  storageClass: ""
+  accessModes:
+    - ReadWriteMany
+  size: 100Gi
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
