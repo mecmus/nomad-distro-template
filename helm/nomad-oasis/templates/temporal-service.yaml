@@ -1,0 +1,23 @@
+{{- if .Values.temporal.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "nomad-oasis.fullname" . }}-temporal
+  labels:
+    {{- include "nomad-oasis.labels" . | nindent 4 }}
+    app.kubernetes.io/component: temporal
+spec:
+  type: ClusterIP
+  ports:
+    - port: 7233
+      targetPort: 7233
+      protocol: TCP
+      name: rpc
+    - port: 7234
+      targetPort: 7234
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "nomad-oasis.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: temporal
+{{- end }}

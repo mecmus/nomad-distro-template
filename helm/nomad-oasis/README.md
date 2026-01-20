@@ -6,6 +6,12 @@ A Helm chart for deploying NOMAD Oasis distribution on Kubernetes.
 
 This Helm chart deploys a complete NOMAD Oasis instance on a Kubernetes cluster. NOMAD is an open-source data management platform for materials science, enabling FAIR (Findable, Accessible, Interoperable, Reusable) data management and sharing.
 
+**Important**: This Helm chart uses pre-built Docker images from GitHub Container Registry. You do **not** need to build images yourself - they are available at:
+- Main app/worker: `ghcr.io/mecmus/nomad-distro-template:main`
+- JupyterHub: `ghcr.io/mecmus/nomad-distro-template/jupyter:main`
+
+The Dockerfile in this repository is only needed if you want to create custom builds.
+
 ## Prerequisites
 
 - Kubernetes 1.23+
@@ -116,6 +122,28 @@ The following table lists the main configurable parameters of the NOMAD Oasis ch
 | `elasticsearch.persistence.storageClass` | Storage class | `""` |
 | `elasticsearch.resources.limits.cpu` | CPU limit | `2` |
 | `elasticsearch.resources.limits.memory` | Memory limit | `4Gi` |
+
+### RabbitMQ Parameters
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `rabbitmq.enabled` | Enable RabbitMQ (message broker for workers) | `true` |
+| `rabbitmq.auth.username` | RabbitMQ username | `rabbitmq` |
+| `rabbitmq.auth.password` | RabbitMQ password (auto-generated if empty) | `""` |
+| `rabbitmq.erlangCookie` | Erlang cookie for clustering | `SWQOKODSQALRPCLNMEQG` |
+| `rabbitmq.persistence.enabled` | Enable persistence | `true` |
+| `rabbitmq.persistence.size` | Persistent volume size | `5Gi` |
+| `rabbitmq.persistence.storageClass` | Storage class | `""` |
+
+### Temporal Parameters
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `temporal.enabled` | Enable Temporal workflow engine | `true` |
+| `temporal.postgresql.enabled` | Enable PostgreSQL for Temporal | `true` |
+| `temporal.postgresql.persistence.enabled` | Enable persistence | `true` |
+| `temporal.postgresql.persistence.size` | Persistent volume size | `5Gi` |
+| `temporal.postgresql.persistence.storageClass` | Storage class | `""` |
 
 ### Ingress Parameters
 

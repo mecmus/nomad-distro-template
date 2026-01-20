@@ -55,6 +55,10 @@ spec:
             - name: NOMAD_ELASTIC_HOST
               value: {{ include "nomad-oasis.fullname" . }}-elastic
             {{- end }}
+            {{- if .Values.rabbitmq.enabled }}
+            - name: NOMAD_RABBITMQ_HOST
+              value: {{ include "nomad-oasis.fullname" . }}-rabbitmq
+            {{- end }}
             - name: NOMAD_SERVICES_API_SECRET
               valueFrom:
                 secretKeyRef:

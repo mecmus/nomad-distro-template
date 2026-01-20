@@ -82,6 +82,17 @@ Generate JupyterHub crypt key
 {{- end }}
 
 {{/*
+Generate RabbitMQ password
+*/}}
+{{- define "nomad-oasis.rabbitmqPassword" -}}
+{{- if .Values.rabbitmq.auth.password }}
+{{- .Values.rabbitmq.auth.password }}
+{{- else }}
+{{- randAlphaNum 32 }}
+{{- end }}
+{{- end }}
+
+{{/*
 Get the image registry
 */}}
 {{- define "nomad-oasis.imageRegistry" -}}

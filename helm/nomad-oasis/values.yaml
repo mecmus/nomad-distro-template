@@ -72,10 +72,24 @@ elasticsearch:
       memory: 2Gi
 
 rabbitmq:
-  enabled: false  # Not included in initial Kubernetes deployment
+  enabled: true
+  auth:
+    username: rabbitmq
+    password: ""  # Auto-generated if empty
+  erlangCookie: "SWQOKODSQALRPCLNMEQG"
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClass: ""
 
 temporal:
-  enabled: false  # Can be enabled for workflow support
+  enabled: true
+  postgresql:
+    enabled: true
+    persistence:
+      enabled: true
+      size: 5Gi
+      storageClass: ""
 
 ingress:
   enabled: true

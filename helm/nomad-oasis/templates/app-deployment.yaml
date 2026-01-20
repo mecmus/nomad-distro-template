@@ -48,6 +48,14 @@ spec:
             - name: NOMAD_ELASTIC_HOST
               value: {{ include "nomad-oasis.fullname" . }}-elastic
             {{- end }}
+            {{- if .Values.rabbitmq.enabled }}
+            - name: NOMAD_RABBITMQ_HOST
+              value: {{ include "nomad-oasis.fullname" . }}-rabbitmq
+            {{- end }}
+            {{- if .Values.temporal.enabled }}
+            - name: NOMAD_TEMPORAL_HOST
+              value: {{ include "nomad-oasis.fullname" . }}-temporal
+            {{- end }}
             {{- if .Values.north.enabled }}
             - name: NOMAD_NORTH_HUB_HOST
               value: {{ include "nomad-oasis.fullname" . }}-north
