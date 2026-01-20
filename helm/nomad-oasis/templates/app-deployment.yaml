@@ -31,6 +31,10 @@ spec:
             - admin
             - run
             - app
+            - --with-gui
+            - --gunicorn
+            - --host
+            - "0.0.0.0"
           ports:
             - name: http
               containerPort: 8000
@@ -77,18 +81,20 @@ spec:
             {{- toYaml .Values.app.resources | nindent 12 }}
           livenessProbe:
             httpGet:
-              path: {{ .Values.nomad.apiBasePath }}/alive
+              path: /-/health
+              port: 8000
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 10
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /-/health
               port: 8000
             initialDelaySeconds: 30
             periodSeconds: 10
-            timeoutSeconds: 5
-          readinessProbe:
-            httpGet:
-              path: {{ .Values.nomad.apiBasePath }}/alive
-              port: 8000
-            initialDelaySeconds: 10
-            periodSeconds: 5
-            timeoutSeconds: 5
+            timeoutSeconds: 10
+            failureThreshold: 30
       volumes:
         - name: config
           configMap:
