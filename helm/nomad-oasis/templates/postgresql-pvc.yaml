@@ -1,0 +1,20 @@
+{{- if .Values.temporal.enabled }}
+{{- if .Values.temporal.postgresql.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "nomad-oasis.fullname" . }}-postgresql
+  labels:
+    {{- include "nomad-oasis.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgresql
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- if .Values.temporal.postgresql.persistence.storageClass }}
+  storageClassName: {{ .Values.temporal.postgresql.persistence.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.temporal.postgresql.persistence.size }}
+{{- end }}
+{{- end }}

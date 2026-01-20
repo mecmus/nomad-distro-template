@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "nomad-oasis.fullname" . }}-worker
+  labels:
+    {{- include "nomad-oasis.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  replicas: {{ .Values.worker.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "nomad-oasis.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: worker
+  template:
+    metadata:
+      labels:
+        {{- include "nomad-oasis.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: worker
+    spec:
+      {{- if .Values.serviceAccount.create }}
+      serviceAccountName: {{ include "nomad-oasis.serviceAccountName" . }}
+      {{- end }}
+      containers:
+        - name: worker
+          image: {{ include "nomad-oasis.imageRegistry" . }}/{{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - python
+            - -m
+            - nomad.cli
+            - admin
+            - run
+            - action-internal-worker
+          env:
+            - name: NOMAD_SERVICE
+              value: "nomad_oasis_worker"
+            {{- if .Values.mongodb.enabled }}
+            - name: NOMAD_MONGO_HOST
+              value: {{ include "nomad-oasis.fullname" . }}-mongo
+            {{- end }}
+            {{- if .Values.elasticsearch.enabled }}
+            - name: NOMAD_ELASTIC_HOST
+              value: {{ include "nomad-oasis.fullname" . }}-elastic
+            {{- end }}
+            {{- if .Values.rabbitmq.enabled }}
+            - name: NOMAD_RABBITMQ_HOST
+              value: {{ include "nomad-oasis.fullname" . }}-rabbitmq
+            {{- end }}
+            {{- if .Values.temporal.enabled }}
+            - name: NOMAD_TEMPORAL_HOST
+              value: {{ include "nomad-oasis.fullname" . }}-temporal
+            {{- end }}
+            {{- if .Values.proxy.enabled }}
+            {{- if .Values.proxy.http }}
+            - name: HTTP_PROXY
+              value: {{ .Values.proxy.http | quote }}
+            {{- end }}
+            {{- if .Values.proxy.https }}
+            - name: HTTPS_PROXY
+              value: {{ .Values.proxy.https | quote }}
+            {{- end }}
+            {{- if .Values.proxy.noProxy }}
+            - name: NO_PROXY
+              value: {{ .Values.proxy.noProxy | quote }}
+            {{- end }}
+            {{- end }}
+            - name: NOMAD_SERVICES_API_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "nomad-oasis.fullname" . }}-secret
+                  key: NOMAD_SERVICES_API_SECRET
+          volumeMounts:
+            - name: config
+              mountPath: /app/nomad.yaml
+              subPath: nomad.yaml
+            {{- if .Values.persistence.enabled }}
+            - name: data
+              mountPath: /app/.volumes
+            {{- end }}
+          resources:
+            {{- toYaml .Values.worker.resources | nindent 12 }}
+          livenessProbe:
+            exec:
+              command:
+                - ls
+                - /
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command:
+                - ls
+                - /
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 5
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "nomad-oasis.fullname" . }}-config
+        {{- if .Values.persistence.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "nomad-oasis.fullname" . }}-data
+        {{- end }}
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

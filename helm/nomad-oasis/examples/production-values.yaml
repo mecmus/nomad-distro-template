@@ -1,0 +1,73 @@
+# Example production values for NOMAD Oasis Helm deployment
+# To use: helm install nomad ./helm/nomad-oasis -f helm/nomad-oasis/examples/production-values.yaml
+
+# Production-grade resource allocation
+app:
+  replicaCount: 2
+  resources:
+    limits:
+      cpu: "4"
+      memory: 8Gi
+    requests:
+      cpu: "1"
+      memory: 2Gi
+
+worker:
+  replicaCount: 8
+  resources:
+    limits:
+      cpu: "8"
+      memory: 16Gi
+    requests:
+      cpu: "2"
+      memory: 4Gi
+
+# Your custom domain configuration
+nomad:
+  apiHost: "nomad.example.com"
+  deployment:
+    name: "production"
+    url: "https://nomad.example.com/api"
+    maintainerEmail: "admin@example.com"
+
+# Production storage
+mongodb:
+  persistence:
+    enabled: true
+    size: 50Gi
+    storageClass: "fast-ssd"
+
+elasticsearch:
+  persistence:
+    enabled: true
+    size: 100Gi
+    storageClass: "fast-ssd"
+  resources:
+    limits:
+      cpu: "4"
+      memory: 8Gi
+    requests:
+      cpu: "1"
+      memory: 4Gi
+
+persistence:
+  enabled: true
+  size: 500Gi
+  storageClass: "fast-ssd"
+
+# Ingress with TLS
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10g"
+  hosts:
+    - host: nomad.example.com
+      paths:
+        - path: /nomad-oasis
+          pathType: Prefix
+  tls:
+    - secretName: nomad-tls
+      hosts:
+        - nomad.example.com

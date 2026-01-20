@@ -1,0 +1,64 @@
+{{- if .Values.temporal.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "nomad-oasis.fullname" . }}-temporal
+  labels:
+    {{- include "nomad-oasis.labels" . | nindent 4 }}
+    app.kubernetes.io/component: temporal
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "nomad-oasis.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: temporal
+  template:
+    metadata:
+      labels:
+        {{- include "nomad-oasis.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: temporal
+    spec:
+      containers:
+        - name: temporal
+          image: temporalio/auto-setup:1.28
+          ports:
+            - containerPort: 7233
+              name: rpc
+            - containerPort: 7234
+              name: http
+          env:
+            - name: DB
+              value: postgres12
+            - name: DB_PORT
+              value: "5432"
+            - name: POSTGRES_USER
+              value: temporal
+            - name: POSTGRES_PWD
+              value: temporal
+            - name: POSTGRES_SEEDS
+              value: {{ include "nomad-oasis.fullname" . }}-postgresql
+            - name: TEMPORAL_ADDRESS
+              value: {{ include "nomad-oasis.fullname" . }}-temporal:7233
+            - name: TEMPORAL_CLI_ADDRESS
+              value: {{ include "nomad-oasis.fullname" . }}-temporal:7233
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  temporal operator cluster health --address $(hostname -i):7233 | grep -q "SERVING"
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  temporal operator cluster health --address $(hostname -i):7233 | grep -q "SERVING"
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            timeoutSeconds: 5
+{{- end }}

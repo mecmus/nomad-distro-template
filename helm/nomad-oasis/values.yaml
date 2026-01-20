@@ -1,0 +1,169 @@
+global:
+  imageRegistry: ghcr.io
+  imagePullSecrets: []
+
+image:
+  repository: mecmus/nomad-distro-template
+  tag: main
+  pullPolicy: IfNotPresent
+
+nomad:
+  apiBasePath: "/nomad-oasis"
+  apiHost: "localhost"
+  apiSecret: ""  # Auto-generated if empty (32+ chars)
+  deployment:
+    name: "oasis"
+    url: "https://my-oasis.org/api"
+    maintainerEmail: "admin@my-oasis.org"
+
+app:
+  replicaCount: 1
+  resources:
+    limits:
+      cpu: "2"
+      memory: 4Gi
+    requests:
+      cpu: "500m"
+      memory: 1Gi
+
+worker:
+  replicaCount: 4
+  resources:
+    limits:
+      cpu: "4"
+      memory: 8Gi
+    requests:
+      cpu: "1"
+      memory: 2Gi
+
+north:
+  enabled: true
+  jupyterhubCryptKey: ""  # Auto-generated if empty
+  image:
+    repository: mecmus/nomad-distro-template/jupyter
+    tag: main
+  resources:
+    limits:
+      cpu: "2"
+      memory: 4Gi
+    requests:
+      cpu: "500m"
+      memory: 1Gi
+
+mongodb:
+  enabled: true
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: ""
+
+elasticsearch:
+  enabled: true
+  persistence:
+    enabled: true
+    size: 30Gi
+    storageClass: ""
+  resources:
+    limits:
+      cpu: "2"
+      memory: 4Gi
+    requests:
+      cpu: "500m"
+      memory: 2Gi
+
+rabbitmq:
+  enabled: true
+  auth:
+    username: rabbitmq
+    password: ""  # Auto-generated if empty
+  erlangCookie: "SWQOKODSQALRPCLNMEQG"
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClass: ""
+
+temporal:
+  enabled: true
+  postgresql:
+    enabled: true
+    persistence:
+      enabled: true
+      size: 5Gi
+      storageClass: ""
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    # Enable gzip compression
+    nginx.ingress.kubernetes.io/enable-gzip: "true"
+    # Large file upload support (for /api/v1/uploads)
+    nginx.ingress.kubernetes.io/proxy-body-size: "35g"
+    # Disable buffering for downloads
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    # WebSocket support for NORTH/JupyterHub
+    nginx.ingress.kubernetes.io/websocket-services: "{{ .Release.Name }}-nomad-oasis-north"
+    # Custom cache control for service-worker.js and meta.json
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      location ~ /gui/(service-worker\.js|meta\.json)$ {
+        add_header Last-Modified $date_gmt;
+        add_header Cache-Control 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0';
+        if_modified_since off;
+        expires off;
+        etag off;
+      }
+      location ~ /nomad-oasis/?(gui)?$ {
+        return 301 $scheme://$host/nomad-oasis/gui/;
+      }
+  hosts:
+    - host: nomad-oasis.local
+      paths:
+        - path: /nomad-oasis
+          pathType: Prefix
+  tls: []
+  #  - secretName: nomad-oasis-tls
+  #    hosts:
+  #      - nomad-oasis.local
+
+persistence:
+  enabled: true
+  storageClass: ""
+  accessModes:
+    - ReadWriteMany
+  size: 100Gi
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+# Proxy configuration for external connections (e.g., providers.optimade.org)
+proxy:
+  enabled: false
+  http: ""    # e.g., "http://proxy.example.com:8080"
+  https: ""   # e.g., "http://proxy.example.com:8080"
+  noProxy: "localhost,127.0.0.1,.svc,.cluster.local"
+
+# Network policies to control ingress/egress traffic
+networkPolicy:
+  enabled: false
+  # Type of network policy: kubernetes, cilium, or calico
+  type: kubernetes
+  # Ingress rules
+  ingress:
+    enabled: true
+    # Allow ingress from ingress controller
+    fromIngress: true
+    # Additional ingress rules
+    rules: []
+  # Egress rules
+  egress:
+    enabled: true
+    # Allow DNS lookups
+    allowDNS: true
+    # Allow access to Kubernetes API
+    allowKubeAPI: true
+    # Allow egress to internet (e.g., providers.optimade.org)
+    allowInternet: true
+    # Additional egress rules
+    rules: []

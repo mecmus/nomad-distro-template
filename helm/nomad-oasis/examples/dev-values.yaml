@@ -1,0 +1,58 @@
+# Example development values for NOMAD Oasis Helm deployment
+# To use: helm install nomad ./helm/nomad-oasis -f helm/nomad-oasis/examples/dev-values.yaml
+
+# Minimal resources for development
+app:
+  replicaCount: 1
+  resources:
+    limits:
+      cpu: "1"
+      memory: 2Gi
+    requests:
+      cpu: "250m"
+      memory: 512Mi
+
+worker:
+  replicaCount: 1
+  resources:
+    limits:
+      cpu: "2"
+      memory: 4Gi
+    requests:
+      cpu: "500m"
+      memory: 1Gi
+
+# Development configuration
+nomad:
+  apiHost: "localhost"
+  deployment:
+    name: "dev"
+    url: "http://localhost:8000/api"
+    maintainerEmail: "dev@localhost"
+
+# Disable persistence for faster iteration
+mongodb:
+  persistence:
+    enabled: false
+
+elasticsearch:
+  persistence:
+    enabled: false
+  resources:
+    limits:
+      cpu: "1"
+      memory: 2Gi
+    requests:
+      cpu: "250m"
+      memory: 1Gi
+
+persistence:
+  enabled: false
+
+# No ingress for local development
+ingress:
+  enabled: false
+
+# Optionally disable NORTH for faster startup
+# north:
+#   enabled: false
