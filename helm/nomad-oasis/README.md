@@ -151,9 +151,19 @@ The following table lists the main configurable parameters of the NOMAD Oasis ch
 |-----------|-------------|---------|
 | `ingress.enabled` | Enable ingress | `true` |
 | `ingress.className` | Ingress class name | `nginx` |
-| `ingress.annotations` | Ingress annotations | `{}` |
+| `ingress.annotations` | Ingress annotations (includes nginx-specific configs) | See values.yaml |
 | `ingress.hosts` | Ingress hosts configuration | See values.yaml |
 | `ingress.tls` | Ingress TLS configuration | `[]` |
+
+**Note**: The Ingress replaces the nginx proxy from docker-compose with the following features:
+- **Gzip compression** via `nginx.ingress.kubernetes.io/enable-gzip`
+- **Large file uploads** (35GB) via `nginx.ingress.kubernetes.io/proxy-body-size`
+- **WebSocket support** for JupyterHub via websocket annotations
+- **Custom cache headers** for service-worker.js and meta.json via configuration-snippet
+- **URL rewrites** for `/nomad-oasis/gui/` redirect via configuration-snippet
+- **Separate routing** for NORTH/JupyterHub on `/nomad-oasis/north/` path
+
+The Ingress requires **nginx-ingress-controller** to be installed in your cluster.
 
 ### Persistence Parameters
 
@@ -425,6 +435,30 @@ Verify connectivity from app pod:
 ```bash
 kubectl exec -it <app-pod> -- curl http://<service-name>:9200
 ```
+
+## Nginx vs Ingress Comparison
+
+The Helm chart replaces docker-compose's nginx proxy with Kubernetes Ingress. Here's how the nginx features are replicated:
+
+| Nginx Feature | Docker Compose | Kubernetes Ingress | Implementation |
+|---------------|----------------|-------------------|----------------|
+| **Gzip compression** | `gzip on` | ✅ Replicated | `nginx.ingress.kubernetes.io/enable-gzip: "true"` |
+| **Large uploads** | `client_max_body_size 35g` | ✅ Replicated | `nginx.ingress.kubernetes.io/proxy-body-size: "35g"` |
+| **Buffering control** | `proxy_buffering off` | ✅ Replicated | `nginx.ingress.kubernetes.io/proxy-buffering: "off"` |
+| **WebSocket support** | `proxy_http_version 1.1` + headers | ✅ Replicated | Built-in nginx-ingress WebSocket support |
+| **URL rewrites** | `rewrite ^ /nomad-oasis/gui/` | ✅ Replicated | `configuration-snippet` with redirect |
+| **Cache headers** | Custom headers for service-worker.js | ✅ Replicated | `configuration-snippet` with add_header |
+| **NORTH routing** | `location /nomad-oasis/north/` | ✅ Replicated | Separate path rule to north service |
+| **Error handling** | `error_page 404 = @redirect` | ⚠️ Limited | Nginx-ingress has basic error pages |
+
+**Requirements:**
+- nginx-ingress-controller must be installed in your cluster
+- For advanced nginx features, you can extend `ingress.annotations` in values.yaml
+
+**Alternative:** If you need features not supported by Ingress, you can:
+1. Disable Ingress: `ingress.enabled: false`
+2. Deploy a separate nginx reverse proxy as a Deployment
+3. Use a Service of type LoadBalancer or NodePort
 
 ## Support
 
