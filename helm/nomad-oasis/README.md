@@ -343,9 +343,16 @@ kubectl describe pvc <pvc-name>
 
 #### Elasticsearch fails to start
 
-Elasticsearch requires `vm.max_map_count` to be set. The chart includes an init container to set this, but it requires privileged access. Ensure your cluster allows privileged containers or set this at the node level:
+**Permission errors**: The chart includes an init container to fix data directory permissions (sets ownership to UID 1000). If you see permission errors, ensure your cluster allows init containers with `runAsUser: 0`.
+
+**VM settings**: Elasticsearch requires `vm.max_map_count` to be set. The chart includes an init container to set this, but it requires privileged access. Ensure your cluster allows privileged containers or set this at the node level:
 ```bash
 sysctl -w vm.max_map_count=262144
+```
+
+To make it permanent:
+```bash
+echo "vm.max_map_count=262144" | sudo tee -a /etc/sysctl.conf
 ```
 
 #### Application fails to connect to services
